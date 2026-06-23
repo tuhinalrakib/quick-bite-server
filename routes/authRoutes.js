@@ -1,5 +1,6 @@
 import express from "express";
-import { loginUser, registerUser } from "../controller/authController.js";
+import { getProfile, loginUser, logoutUser, refreshToken, registerUser } from "../controller/authController.js";
+import { verifyJWT } from "../middlewares/authMiddlewares.js";
 
 const router = express.Router()
 
@@ -14,5 +15,8 @@ router.post("/refresh", refreshToken);
 
 // ✅ Profile Query
 router.get("/profile", verifyJWT, getProfile)
+
+// ✅ Logout user
+router.post("/logout", verifyJWT, logoutUser);
 
 export default router

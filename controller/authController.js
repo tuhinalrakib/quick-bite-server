@@ -15,138 +15,142 @@ const refreshSecret = process.env.JWT_REFRESH_SECRET
                 Helpers using HMAC secrets
 ==========================================================*/
 const createAccessToken = (user) => {
-    if (!accessSecret) {
-        throw new Error("JWT_ACCESS_SECRET missing");
+  if (!accessSecret) {
+    throw new Error("JWT_ACCESS_SECRET missing");
+  }
+  return jwt.sign(
+    {
+      id: user._id.toString(),
+      role: user.role
+    },
+    accessSecret,
+    {
+      expiresIn: "1h"
     }
-    return jwt.sign(
-        {
-            id: user._id.toString(),
-            role: user.role
-        },
-        accessSecret,
-        {
-            expiresIn: "1h"
-        }
-    )
+  )
 }
 
 const createRefreshToken = (user) => {
-    if (!refreshSecret) {
-        throw new Error("JWT_REFRESH_SECRET missing");
+  if (!refreshSecret) {
+    throw new Error("JWT_REFRESH_SECRET missing");
+  }
+  return jwt.sign(
+    {
+      id: user._id.toString(),
+      role: user.role
+    },
+    refreshSecret,
+    {
+      expiresIn: "7d"
     }
-    return jwt.sign(
-        {
-            id: user._id.toString(),
-            role: user.role
-        },
-        refreshSecret,
-        {
-            expiresIn: "7d"
-        }
-    )
+  )
 }
 
 /*==========================================================
                 REGISTER
 ==========================================================*/
 export const registerUser = asyncHandler(async (req, res) => {
-    const { name, email, password, confirmPassword, phone } = req.body
+  const { name, email, password, confirmPassword, phone } = req.body
 
-    // console.log(name, email, password, confirmPassword, phone)
+  // console.log(name, email, password, confirmPassword, phone)
 
-    if (!name || !email || !password || !confirmPassword || !phone) {
-        return res.status(400).json({ message: "Name, email, phone and password are required" });
-    }
+  if (!name || !email || !password || !confirmPassword || !phone) {
+    return res.status(400).json({ message: "Name, email, phone and password are required" });
+  }
 
-    if (password !== confirmPassword) {
-        return res.status(404).json({
-            message: "Password didn't match"
-        })
-    }
-
-    // basic normalization
-    const normalizedEmail = String(email).toLowerCase().trim();
-
-    const exist = await User.findOne({ email: normalizedEmail })
-    console.log(exist)
-    if (exist) {
-        return res.status(409).json({
-            message: "Email already exist"
-        })
-    }
-
-    const user = await User.create({
-        name,
-        email,
-        password,
-        role: 'admin',
-        phone
+  if (password !== confirmPassword) {
+    return res.status(404).json({
+      message: "Password didn't match"
     })
+  }
 
-    if (!user) {
-        return res.status(503).json({
-            success: false,
-            message: "Cannot register at this moment"
-        })
-    }
+  // basic normalization
+  const normalizedEmail = String(email).toLowerCase().trim();
 
-    return res.status(201).json({
-        success: true,
-        message: "Register Successfully!"
+  const exist = await User.findOne({ email: normalizedEmail })
+  console.log(exist)
+  if (exist) {
+    return res.status(409).json({
+      message: "Email already exist"
     })
+  }
+
+  const user = await User.create({
+    name,
+    email,
+    password,
+    role: 'admin',
+    phone
+  })
+
+  if (!user) {
+    return res.status(503).json({
+      success: false,
+      message: "Cannot register at this moment"
+    })
+  }
+
+  return res.status(201).json({
+    success: true,
+    message: "Register Successfully!"
+  })
 })
 
 /*==========================================================
                 LOGIN
 ==========================================================*/
 export const loginUser = asyncHandler(async (req, res) => {
-    const { email, password } = req.body
+  const { email, password } = req.body
 
-    if (!email || !password) {
-        return res.status(400).json({ message: "Email and password required" });
-    }
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password required" });
+  }
 
-    // basic normalization
-    const normalizedEmail = String(email).toLowerCase().trim();
+  // basic normalization
+  const normalizedEmail = String(email).toLowerCase().trim();
 
-    const user = await User.findOne({ email: normalizedEmail })
+  const user = await User.findOne({ email: normalizedEmail })
+                          .select("+password")
 
-    if (!user) return res.status(401).json({ message: "User not found" });
-    if (!user.isActive) {
-        return res.status(403).json({ message: "User did not active" });
-    }
+  if (!user) return res.status(401).json({ message: "No account found with this email!" });
+  if (!user.isActive) {
+    return res.status(403).json({ message: "User did not active" });
+  }
 
-    const isMatch = await user.matchPassword(password)
-    if (!isMatch) {
-        return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const accessToken = createAccessToken(user)
-    const refreshToken = createRefreshToken(user);
-
-    await setRefreshTokenCache(refreshToken, user._id.toString())
-
-    const isProduction = process.env.NODE_ENV === "production";
-    const cookieOptions = {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? "none" : "lax",
-        path: "/",
-    };
-
-    
-    res.cookie("accessToken", accessToken, {
-        ...cookieOptions,
-        maxAge: 60 * 60 * 1000,
+  const isMatch = await user.matchPassword(password)
+  console.log(isMatch)
+  if (!isMatch) {
+    return res.status(401).json({
+      message: "Invalid credentials! password did not match"
     });
+  }
 
-    res.cookie("refreshToken", refreshToken, {
-        ...cookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+  const accessToken = createAccessToken(user)
+  const refreshToken = createRefreshToken(user);
 
-    return res.status(200).json({
-    success : true,
+  await setRefreshTokenCache(refreshToken, user._id.toString())
+
+  const isProduction = process.env.NODE_ENV === "production";
+  const cookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+  };
+
+
+  res.cookie("accessToken", accessToken, {
+    ...cookieOptions,
+    maxAge: 60 * 60 * 1000,
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    ...cookieOptions,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  return res.status(200).json({
+    success: true,
     message: "Logged in",
     user
   });
@@ -156,7 +160,7 @@ export const loginUser = asyncHandler(async (req, res) => {
                 REFRESH TOKEN
 ==========================================================*/
 export const refreshToken = asyncHandler(async (req, res) => {
-  const refreshToken = req.cookies.refreshToken; // কুকি থেকে রিফ্রেশ টোকেন রিড করুন
+  const refreshToken = req.cookies.refreshToken; 
 
   if (!refreshToken) {
     return res.status(401).json({ message: "Refresh token missing" });
@@ -307,14 +311,14 @@ export const googleLogin = asyncHandler(async (req, res) => {
                 Get Profile
 ==========================================================*/
 export const getProfile = asyncHandler(async (req, res) => {
-  const userData = await User.findById(req.user.id)
+  const user = await User.findById(req.user.id)
 
-  if (!userData) {
+  if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
 
   res.status(200).json({
-    success : true,
+    success: true,
     user
   });
 });
