@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
 import User from "../models/User.js"
 import { deleteRefreshTokenCache, getRefreshTokenCache, setRefreshTokenCache } from "../services/caching/tokenCaching.js"
+import axios from "axios"
 
 dotenv.config()
 
@@ -79,7 +80,6 @@ export const registerUser = asyncHandler(async (req, res) => {
     name,
     email,
     password,
-    role: 'admin',
     phone
   })
 
@@ -261,7 +261,6 @@ export const googleLogin = asyncHandler(async (req, res) => {
       image: picture,
       googleId: providerId,
       provider: "google",
-      role: "user",
       isVerified: true
     });
   } else {

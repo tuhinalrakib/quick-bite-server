@@ -16,7 +16,7 @@ export const verifyJWT = async (req, res, next) => {
 
     try {
         const decoded = verifyAccessToken(token);
-        console.log("Decoded token:", decoded); // Debugging log
+        // console.log("Decoded token:", decoded); // Debugging log
         // req.user = await User.findById(decoded.id)
         req.user = decoded
         next();

@@ -1,5 +1,6 @@
 import express from "express"
 import authRoutes from "./authRoutes.js"
+import foodRoutes from "./foodRoutes.js"
 
 const router = express.Router()
 
@@ -11,5 +12,6 @@ router.get("/", (req, res) => {
 })
 
 router.use("/auth", authRoutes)
+router.use("/food", foodRoutes)
 
 export default router
