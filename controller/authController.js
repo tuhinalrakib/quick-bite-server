@@ -3,6 +3,7 @@ import { OAuth2Client } from "google-auth-library"
 import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
 import User from "../models/User.js"
+import Food from "../models/Food.js"
 import { deleteRefreshTokenCache, getRefreshTokenCache, setRefreshTokenCache } from "../services/caching/tokenCaching.js"
 import axios from "axios"
 
@@ -319,5 +320,98 @@ export const getProfile = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     user
+  });
+});
+
+// @desc    Get all users
+// @route   GET /auth/users
+// @access  Private/Admin
+export const getAllUsers = asyncHandler(async (req, res) => {
+  const users = await User.find({}).sort({ createdAt: -1 });
+  return res.status(200).json({
+    success: true,
+    users
+  });
+});
+
+// @desc    Update user role
+// @route   PATCH /auth/users/:id/role
+// @access  Private/Admin
+export const updateUserRole = asyncHandler(async (req, res) => {
+  const { role } = req.body;
+  if (!role || !["customer", "admin"].includes(role)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid role specified."
+    });
+  }
+
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: "User not found."
+    });
+  }
+
+  // Prevent self-demotion to avoid locking out the logged-in admin
+  if (req.user.id === user._id.toString() && role !== "admin") {
+    return res.status(400).json({
+      success: false,
+      message: "You cannot change your own admin role."
+    });
+  }
+
+  user.role = role;
+  await user.save();
+
+  return res.status(200).json({
+    success: true,
+    message: `User role updated to ${role} successfully.`,
+    user
+  });
+});
+
+// @desc    Delete user
+// @route   DELETE /auth/users/:id
+// @access  Private/Admin
+export const deleteUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: "User not found."
+    });
+  }
+
+  // Prevent self-deletion
+  if (req.user.id === user._id.toString()) {
+    return res.status(400).json({
+      success: false,
+      message: "You cannot delete your own admin account."
+    });
+  }
+
+  await user.deleteOne();
+
+  return res.status(200).json({
+    success: true,
+    message: "User deleted successfully."
+  });
+});
+
+// @desc    Get dashboard stats (counts)
+// @route   GET /auth/dashboard-stats
+// @access  Private/Admin
+export const getDashboardStats = asyncHandler(async (req, res) => {
+  const totalCustomers = await User.countDocuments({ role: "customer" });
+  const activeItems = await Food.countDocuments({ isAvailable: true });
+
+  return res.status(200).json({
+    success: true,
+    totalCustomers,
+    activeItems,
+    totalOrders: 148, // placeholder
+    totalRevenue: "Rs. 45,200" // placeholder
   });
 });
