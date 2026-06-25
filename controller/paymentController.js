@@ -14,8 +14,20 @@ export const getPayHereHash = asyncHandler(async (req, res) => {
         throw new Error("orderId, amount, and currency are required");
     }
 
-    const merchantId = process.env.PAYHERE_MERCHANT_ID
-    const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET
+    const merchantId = process.env.PAYHERE_MERCHANT_ID;
+    let merchantSecret = process.env.PAYHERE_MERCHANT_SECRET;
+
+    // Decode base64 merchant secret if applicable
+    if (merchantSecret) {
+        try {
+            const decoded = Buffer.from(merchantSecret, "base64").toString("utf-8");
+            if (/^[a-zA-Z0-9]+$/.test(decoded)) {
+                merchantSecret = decoded;
+            }
+        } catch (error) {
+            // Keep original if decoding fails
+        }
+    }
 
     const formattedAmount = Number(amount).toFixed(2);
 

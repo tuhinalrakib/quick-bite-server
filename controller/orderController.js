@@ -25,7 +25,7 @@ export const createOrder = asyncHandler(async (req, res) => {
         totalAmount: Number(totalAmount),
         paymentMethod,
         shippingDetails,
-        paymentStatus: "Pending",
+        paymentStatus: paymentMethod === "payhere" ? "Paid" : "Pending",
         orderStatus: "Pending",
     });
 
