@@ -15,6 +15,7 @@ app.use(helmet())
 const allowedOrigins = [
     "http://localhost:3000",
     "http://localhost:3001",
+    "https://quick-bite-delta-six.vercel.app"
 ]
 
 app.use(cors({
