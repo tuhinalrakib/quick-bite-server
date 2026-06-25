@@ -1,5 +1,5 @@
 import express from "express";
-import { createFoodItem, getAllFoodItems, deleteFoodItem } from "../controller/foodController.js";
+import { createFoodItem, getAllFoodItems, deleteFoodItem, updateFoodItem } from "../controller/foodController.js";
 import { authorizeRoles, verifyJWT } from "../middlewares/authMiddlewares.js";
 import multer from "multer";
 import { optimizeImage, uploadToCloudinary } from "../middlewares/imageProcessMiddleWares.js";
@@ -22,6 +22,15 @@ router.delete("/:id",
     verifyJWT,
     authorizeRoles("admin"),
     deleteFoodItem
+)
+
+router.put("/:id",
+    verifyJWT,
+    authorizeRoles("admin"),
+    upload.single("image"),
+    optimizeImage,
+    uploadToCloudinary,
+    updateFoodItem
 )
 
 export default router

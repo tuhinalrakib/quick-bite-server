@@ -9,7 +9,7 @@ export const setRefreshTokenCache  = async (token, userId) => {
 
 // ✅ Get userId using refresh token
 export const getRefreshTokenCache = async(token)=>{
-    const userId =  redisClient.get(`rafiShopRefresh:${token}`)
+    const userId = await redisClient.get(`rafiShopRefresh:${token}`)
     return userId || null
 }
 

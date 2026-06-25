@@ -9,7 +9,7 @@ import cloudinary from "../config/cloudinary.js";
 export const optimizeImage = async (req, res, next) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ message: "Image required" });
+            return next();
         }
         const optimizedBuffer = await sharp(req.file.buffer)
             .resize(500, 500, { fit: "cover" })
@@ -27,7 +27,7 @@ export const optimizeImage = async (req, res, next) => {
 export const uploadToCloudinary = (req, res, next) => {
     try {
         if (!req.imageBuffer) {
-            return res.status(400).json({ message: "No processed image found" });
+            return next();
         }
 
         const stream = cloudinary.uploader.upload_stream(

@@ -15,17 +15,13 @@ export const getFoodCache = async (key) => {
 }
 
 export const deleteFoodCache = async () => {
-    const keys = await redisClient.get("quickBite:*")
-    if (keys.length) await redisClient.del(keys);
-}
+    const keys = await redisClient.keys("quickBite:*");
+    if (keys && keys.length) await redisClient.del(keys);
+};
 
 
 export const setFoodByIdCache = async (id, product) => {
-    await redisClient.set(`
-        quickBite:${id}`, 
-        JSON.stringify(product), 
-        "EX", 
-        900);
+    await redisClient.set(`quickBite:${id}`, JSON.stringify(product), "EX", 900);
 };
 
 export const getFoodByIdCache = async (id) => {

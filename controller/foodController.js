@@ -6,7 +6,7 @@ import { deleteFoodCache, getFoodCache, setFoodCache } from "../services/caching
 // @route   POST /food
 // @access  Private/Admin
 export const createFoodItem = asyncHandler(async (req, res) => {
-    const { name, price, description, category, isAvailable, rating, restaurantName } = req.body;
+    const { name, price, description, category } = req.body;
     const imageUrl = req.cloudinaryData || "";
 
     if (!imageUrl) {
@@ -22,9 +22,7 @@ export const createFoodItem = asyncHandler(async (req, res) => {
         price: Number(price),
         image: imageUrl,
         category,
-        isAvailable: isAvailable !== undefined ? (isAvailable === "true" || isAvailable === true) : true,
-        rating: rating ? Number(rating) : 4.0,
-        restaurantName: restaurantName || "Restaurant Origin"
+        restaurantName: "Restaurant Origin"
     });
 
     await deleteFoodCache()
@@ -78,5 +76,41 @@ export const deleteFoodItem = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: "Food Item Deleted Successfully!"
+    });
+});
+
+// @desc    Update a food item
+// @route   PUT /food/:id
+// @access  Private/Admin
+export const updateFoodItem = asyncHandler(async (req, res) => {
+    const { name, price, description, category, isAvailable } = req.body;
+    const food = await Food.findById(req.params.id);
+
+    if (!food) {
+        return res.status(404).json({
+            success: false,
+            message: "Food item not found."
+        });
+    }
+
+    if (name) food.name = name;
+    if (description) food.description = description;
+    if (price !== undefined) food.price = Number(price);
+    if (category) food.category = category;
+    if (isAvailable !== undefined) {
+        food.isAvailable = isAvailable === "true" || isAvailable === true;
+    }
+
+    if (req.cloudinaryData) {
+        food.image = req.cloudinaryData;
+    }
+
+    await food.save();
+    await deleteFoodCache();
+
+    return res.status(200).json({
+        success: true,
+        message: "Food Item Updated Successfully!",
+        data: food
     });
 });
