@@ -9,6 +9,8 @@ import morgan from "morgan"
 
 const app = express()
 
+app.set('trust proxy', 1)
+
 app.use(helmet())
 
 // Middleware setup
