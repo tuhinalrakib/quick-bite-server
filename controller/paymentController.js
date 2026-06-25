@@ -17,13 +17,10 @@ export const getPayHereHash = asyncHandler(async (req, res) => {
     const merchantId = process.env.PAYHERE_MERCHANT_ID
     const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET
 
-    // Format amount to exactly 2 decimal places (no comma formatting)
     const formattedAmount = Number(amount).toFixed(2);
 
-    // Inner MD5 of merchant secret (in uppercase)
     const secretHash = crypto.createHash("md5").update(merchantSecret).digest("hex").toUpperCase();
 
-    // Outer MD5 signature (in uppercase)
     const concatString = merchantId + orderId + formattedAmount + currency + secretHash;
     const finalHash = crypto.createHash("md5").update(concatString).digest("hex").toUpperCase();
 
