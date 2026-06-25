@@ -1,6 +1,17 @@
 import express from "express";
-import { getProfile, googleLogin, loginUser, logoutUser, refreshToken, registerUser } from "../controller/authController.js";
-import { verifyJWT } from "../middlewares/authMiddlewares.js";
+import { 
+  getProfile, 
+  googleLogin, 
+  loginUser, 
+  logoutUser, 
+  refreshToken, 
+  registerUser,
+  getAllUsers,
+  updateUserRole,
+  deleteUser,
+  getDashboardStats
+} from "../controller/authController.js";
+import { verifyJWT, authorizeRoles } from "../middlewares/authMiddlewares.js";
 
 const router = express.Router()
 
@@ -20,5 +31,13 @@ router.get("/profile", verifyJWT, getProfile)
 
 // ✅ Logout user
 router.post("/logout", verifyJWT, logoutUser);
+
+// ✅ User Management (Admin Only)
+router.get("/users", verifyJWT, authorizeRoles("admin"), getAllUsers)
+router.patch("/users/:id/role", verifyJWT, authorizeRoles("admin"), updateUserRole)
+router.delete("/users/:id", verifyJWT, authorizeRoles("admin"), deleteUser)
+
+// ✅ Dashboard Stats (Admin Only)
+router.get("/dashboard-stats", verifyJWT, authorizeRoles("admin"), getDashboardStats)
 
 export default router
