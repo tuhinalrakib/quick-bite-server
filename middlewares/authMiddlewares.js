@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import { verifyAccessToken } from "../utils/verifyJWT.js";
+import logger from "../utils/logger.js";
 
 
 export const verifyJWT = async (req, res, next) => {

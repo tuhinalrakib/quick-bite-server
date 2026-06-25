@@ -1,6 +1,7 @@
 import express from "express";
 import { 
   getProfile, 
+  updateProfile,
   googleLogin, 
   loginUser, 
   logoutUser, 
@@ -28,6 +29,7 @@ router.post("/google", googleLogin)
 
 // ✅ Profile Query
 router.get("/profile", verifyJWT, getProfile)
+router.put("/profile", verifyJWT, updateProfile)
 
 // ✅ Logout user
 router.post("/logout", verifyJWT, logoutUser);

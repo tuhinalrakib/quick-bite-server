@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler"
 import Food from "../models/Food.js"
+import { deleteFoodCache, getFoodCache, setFoodCache } from "../services/caching/foodCaching.js";
 
 // @desc    Create a new food item
 // @route   POST /food
@@ -26,6 +27,8 @@ export const createFoodItem = asyncHandler(async (req, res) => {
         restaurantName: restaurantName || "Restaurant Origin"
     });
 
+    await deleteFoodCache()
+
     return res.status(201).json({
         success: true,
         message: "Food Item Created Successfully!",
@@ -37,7 +40,18 @@ export const createFoodItem = asyncHandler(async (req, res) => {
 // @route   GET /food
 // @access  Public
 export const getAllFoodItems = asyncHandler(async (req, res) => {
+    const cachKey = JSON.stringify("allFoods");
+
+    const cachedAllFoods = await getFoodCache(cachKey)
+    if(cachedAllFoods){
+        return res.status(200).json({
+            success : true,
+            foods : cachedAllFoods
+        })
+    }
+
     const foods = await Food.find().sort({ createdAt: -1 });
+    await setFoodCache(cachKey, foods)
 
     return res.status(200).json({
         success: true,
@@ -59,6 +73,7 @@ export const deleteFoodItem = asyncHandler(async (req, res) => {
     }
 
     await food.deleteOne();
+    await deleteFoodCache()
 
     return res.status(200).json({
         success: true,

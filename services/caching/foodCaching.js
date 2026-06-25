@@ -1,24 +1,23 @@
-import asyncHandler from "express-async-handler"
-import redisClient from "../../config/redis"
+import redisClient from "../../config/redis.js"
 
-export const setFoodCache = asyncHandler(async (key, value, ttl = 3600) => {
+export const setFoodCache = async (key, value, ttl = 3600) => {
     await redisClient.set(
         `quickBite:${key}`,
         JSON.stringify(value),
         "EX",
         ttl
     )
-})
+}
 
-export const getFoodCache = asyncHandler(async (key) => {
+export const getFoodCache = async (key) => {
     const data = await redisClient.get(`quickBite:${key}`);
     return data ? JSON.parse(data) : null;
-})
+}
 
-export const deleteFoodCache = asyncHandler(async () => {
+export const deleteFoodCache = async () => {
     const keys = await redisClient.get("quickBite:*")
     if (keys.length) await redisClient.del(keys);
-})
+}
 
 
 export const setFoodByIdCache = async (id, product) => {

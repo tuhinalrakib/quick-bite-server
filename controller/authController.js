@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
 import User from "../models/User.js"
 import Food from "../models/Food.js"
+import Order from "../models/Order.js"
 import { deleteRefreshTokenCache, getRefreshTokenCache, setRefreshTokenCache } from "../services/caching/tokenCaching.js"
 import axios from "axios"
 
@@ -323,6 +324,78 @@ export const getProfile = asyncHandler(async (req, res) => {
   });
 });
 
+/*==========================================================
+                Update Profile
+==========================================================*/
+export const updateProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id);
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const { name, phone, address, currentPassword, newPassword } = req.body;
+
+  // Handle password update if password fields are provided
+  if (currentPassword || newPassword) {
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Both current password and new password are required to change password."
+      });
+    }
+
+    if (user.provider !== "credentials" && user.googleId) {
+      return res.status(400).json({
+        success: false,
+        message: "Accounts registered with Google/OAuth cannot change password."
+      });
+    }
+
+    const userWithPassword = await User.findById(req.user.id).select("+password");
+    const isMatch = await userWithPassword.matchPassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password did not match."
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 6 characters."
+      });
+    }
+
+    user.password = newPassword;
+  }
+
+  // Update other text fields
+  if (name !== undefined) user.name = name;
+  if (phone !== undefined) user.phone = phone;
+
+  // Update nested address fields
+  if (address) {
+    user.address = {
+      street: address.street !== undefined ? address.street : (user.address?.street || ""),
+      city: address.city !== undefined ? address.city : (user.address?.city || ""),
+      postalCode: address.postalCode !== undefined ? address.postalCode : (user.address?.postalCode || ""),
+    };
+  }
+
+  const updatedUser = await user.save();
+  
+  // Exclude password in response by re-fetching
+  const responseUser = await User.findById(updatedUser._id);
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully.",
+    user: responseUser
+  });
+});
+
 // @desc    Get all users
 // @route   GET /auth/users
 // @access  Private/Admin
@@ -406,12 +479,40 @@ export const deleteUser = asyncHandler(async (req, res) => {
 export const getDashboardStats = asyncHandler(async (req, res) => {
   const totalCustomers = await User.countDocuments({ role: "customer" });
   const activeItems = await Food.countDocuments({ isAvailable: true });
+  const totalOrders = await Order.countDocuments();
+
+  // Aggregate total revenue from paid or delivered orders
+  const revenueResult = await Order.aggregate([
+    {
+      $match: {
+        $or: [
+          { paymentStatus: "Paid" },
+          { orderStatus: "Delivered" }
+        ]
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$totalAmount" }
+      }
+    }
+  ]);
+  const totalRevenueNum = revenueResult.length > 0 ? revenueResult[0].total : 0;
+  const totalRevenue = `$${totalRevenueNum.toFixed(2)}`;
+
+  // Get the 5 most recent orders for recent activity tracking
+  const recentOrders = await Order.find()
+    .populate("user", "name email")
+    .sort({ createdAt: -1 })
+    .limit(5);
 
   return res.status(200).json({
     success: true,
     totalCustomers,
     activeItems,
-    totalOrders: 148, // placeholder
-    totalRevenue: "Rs. 45,200" // placeholder
+    totalOrders,
+    totalRevenue,
+    recentOrders
   });
 });
